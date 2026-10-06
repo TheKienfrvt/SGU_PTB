@@ -1,7 +1,7 @@
 /* eslint n/no-unsupported-features/node-builtins: "off" */
-/* globals initPhotoSwipeFromDOM initRemoteBuzzerFromDOM processChromaImage remoteBuzzerClient rotaryController globalGalleryHandle photoboothTools photoboothPreview virtualKeyboard csrf */
+/* globals initPhotoSwipeFromDOM initRemoteBuzzerFromDOM processChromaImage remoteBuzzerClient rotaryController globalGalleryHandle photoboothTools photoboothPreview virtualKeyboard csrf sguKiosk */
 
-/* global createScreensaver */
+/* global createScreensaver photoboothPhotoCamera createCaptureSession */
 const photoBooth = (function () {
     const PhotoStyle = {
             PHOTO: 'photo',
@@ -32,6 +32,20 @@ const photoBooth = (function () {
             OFF: 'off',
             ALWAYS: 'always',
             ONCE: 'once'
+        },
+        FlowState = {
+            IDLE: 'idle',
+            PREVIEW: 'preview',
+            COUNTDOWN: 'countdown',
+            CAPTURING: 'capturing',
+            TRANSFERRING: 'transferring',
+            SHOT_PREVIEW: 'shot-preview',
+            SELECTING: 'selecting',
+            COMPOSING: 'composing',
+            FINAL_PREVIEW: 'final-preview',
+            PRINTING: 'printing',
+            COMPLETE: 'complete',
+            ERROR: 'error'
         };
 
     const api = {},
@@ -97,6 +111,21 @@ const photoBooth = (function () {
     api.photoStyle = '';
     api.collageLayout = config.collage.layout;
     api.collageLimit = config.collage.limit;
+    api.flowState = FlowState.IDLE;
+
+    /**
+     * The established capture guards remain authoritative. This single state
+     * signal gives kiosk UI a reliable view of that flow without introducing a
+     * second controller or changing the public capture API.
+     */
+    api.setFlowState = function (state) {
+        if (!Object.values(FlowState).includes(state)) {
+            photoboothTools.console.logDev('Ignoring invalid flow state: ' + state);
+            return;
+        }
+        api.flowState = state;
+        document.dispatchEvent(new CustomEvent('photobooth.flow.state', { detail: { state: state } }));
+    };
 
     api.isTimeOutPending = function () {
         return typeof timeOut !== 'undefined';
@@ -110,7 +139,7 @@ const photoBooth = (function () {
 
         photoboothTools.console.log('Timeout for auto reload cleared.');
 
-        if (!api.takingPic) {
+        if (!api.takingPic && !savingFile) {
             photoboothTools.console.logDev('Timeout for auto reload set to ' + timeToLive + ' milliseconds.');
             timeOut = setTimeout(function () {
                 photoboothTools.reloadPage();
@@ -118,7 +147,15 @@ const photoBooth = (function () {
         }
     };
 
+    // A native save dialog can remain open longer than the kiosk idle timeout.
+    let savingFile = false;
+    document.addEventListener('photobooth.save.busy', (event) => {
+        savingFile = event.detail.busy === true;
+        api.resetTimeOut();
+    });
+
     api.reset = function () {
+        api.setFlowState(FlowState.IDLE);
         loader.css('--stage-background', 'var(--background-countdown-color)');
         loader.removeClass('stage--active');
         loaderButtonBar.empty();
@@ -142,6 +179,7 @@ const photoBooth = (function () {
     api.init = function () {
         api.reset();
         startPage.addClass('stage--active');
+        api.setFlowState(FlowState.IDLE);
         if (usesBackgroundPreview) {
             photoboothPreview.startVideo(CameraDisplayMode.BACKGROUND);
             photoboothTools.console.logDev('Preview: core: start video (BACKGROUND) from api.init.');
@@ -156,6 +194,10 @@ const photoBooth = (function () {
         initPhotoSwipeFromDOM('#galimages');
 
         api.screensaver.resetTimer();
+
+        if (api.captureSession) {
+            api.captureSession.restore();
+        }
 
         const params = new URLSearchParams(window.location.search);
         if (params.has('screensaverPreview')) {
@@ -205,7 +247,23 @@ const photoBooth = (function () {
     };
 
     api.stopPreviewAndCaptureFromVideo = () => {
+        if (
+            config.sgu?.enabled &&
+            config.sgu.capture_mode !== 'browser' &&
+            config.sgu.require_usb_capture !== false &&
+            !config.dev.demo_images &&
+            !config.windows_agent?.enabled
+        ) {
+            throw new Error('Chưa cấu hình Windows Camera Agent để chụp JPEG qua USB.');
+        }
+        if (config.sgu?.capture_mode !== 'browser' && config.windows_agent && config.windows_agent.enabled) {
+            // HDMI preview remains live. It must never supply final-photo pixels.
+            return;
+        }
         if (config.preview.camTakesPic) {
+            if (!photoboothPreview.isMediaReady() && !config.dev.demo_images) {
+                throw new Error('Camera preview disconnected before capture.');
+            }
             if (photoboothPreview.stream) {
                 videoSensor.get(0).width = previewVideo.get(0).videoWidth;
                 videoSensor.get(0).height = previewVideo.get(0).videoHeight;
@@ -225,7 +283,10 @@ const photoBooth = (function () {
             if (api.countdown.element === null) {
                 const element = document.createElement('div');
                 element.classList.add('countdown');
-                document.body.append(element);
+                const slot = config.sgu?.enabled &&
+                    (document.querySelector('[data-sgu-capture-preview] #preview-wrapper') ||
+                        document.querySelector('[data-sgu-capture-preview]'));
+                (slot || document.body).append(element);
                 api.countdown.element = element;
             }
 
@@ -286,7 +347,11 @@ const photoBooth = (function () {
                         }
 
                         // stop second hit
-                        if (remainingSeconds === stop && !config.preview.camTakesPic) {
+                        if (
+                            remainingSeconds === stop &&
+                            !config.preview.camTakesPic &&
+                            !config.windows_agent?.enabled
+                        ) {
                             photoboothTools.console.logDev('Preview: core: stopping preview at countdown.');
                             photoboothPreview.stopPreview();
                         }
@@ -498,10 +563,37 @@ const photoBooth = (function () {
             return;
         }
 
+        // CamLink browser capture never uses the USB agent, so an offline agent must not block it.
+        if (config.sgu?.capture_mode !== 'browser' && config.windows_agent && config.windows_agent.enabled) {
+            if (photoboothPhotoCamera.pending || !(await photoboothPhotoCamera.check()) || api.takingPic) {
+                return;
+            }
+        }
+
+        if (config.sgu && config.sgu.enabled && typeof sguKiosk !== 'undefined' && !sguKiosk.isReady()) {
+            // Capture intentionally releases preview. A retake must reopen it
+            // before checking readiness, without prompting again automatically.
+            if (photoboothPreview.previewStatus.state === 'stopped') {
+                await photoboothPreview.initializeMedia();
+            }
+            if (api.takingPic) {
+                return;
+            }
+            if (!sguKiosk.isReady()) {
+                photoboothTools.console.logDev('SGU preflight is not ready; capture request ignored.');
+
+                return;
+            }
+        }
+
         if (config.selfie_mode) {
             photoboothTools.console.logDev('ERROR: Taking picture unsupported on selfie mode!');
 
             return;
+        }
+
+        if (api.captureSession) {
+            return api.captureSession.start();
         }
 
         try {
@@ -512,6 +604,7 @@ const photoBooth = (function () {
 
             remoteBuzzerClient.inProgress(photoStyle);
             api.takingPic = true;
+            api.setFlowState(FlowState.PREVIEW);
             photoboothTools.console.logDev('Taking picture in progress: ' + api.takingPic);
 
             if (api.isTimeOutPending()) {
@@ -600,10 +693,22 @@ const photoBooth = (function () {
                 photoboothTools.getRequest(getUrl);
             }
 
+            api.setFlowState(FlowState.COUNTDOWN);
             await api.countdown.start(countdownTime);
             await api.cheese.start();
 
-            if (config.preview.camTakesPic && !photoboothPreview.stream && !config.dev.demo_images) {
+            if (config.sgu?.enabled && config.windows_agent?.enabled && !photoboothPreview.isMediaReady()) {
+                throw new Error('Mất kết nối Live Preview. Kiểm tra camera rồi thử lại.');
+            }
+
+            api.setFlowState(FlowState.CAPTURING);
+
+            if (
+                !(config.windows_agent && config.windows_agent.enabled) &&
+                config.preview.camTakesPic &&
+                !photoboothPreview.isMediaReady() &&
+                !config.dev.demo_images
+            ) {
                 api.errorPic({
                     error: 'No preview by device cam available!'
                 });
@@ -634,9 +739,13 @@ const photoBooth = (function () {
 
             const data = {
                 filter: imgFilter,
-                style: api.photoStyle,
-                canvasimg: videoSensor.get(0).toDataURL('image/jpeg')
+                style: api.photoStyle
             };
+            if (config.windows_agent && config.windows_agent.enabled) {
+                data.capture_id = photoboothPhotoCamera.captureId();
+            } else if (config.preview.camTakesPic) {
+                data.canvasimg = videoSensor.get(0).toDataURL('image/jpeg');
+            }
 
             if (api.photoStyle === PhotoStyle.COLLAGE) {
                 data.file = currentCollageFile;
@@ -671,15 +780,24 @@ const photoBooth = (function () {
 
     api.callTakePicApi = async (data, retry = 0) => {
         startTime = new Date().getTime();
+        if (data.capture_id) {
+            photoboothPhotoCamera.watchProgress(data.capture_id);
+        }
         photoboothTools.console.logDev('Capture image.');
         photoboothTools
             .ajaxWithCsrf({
                 url: environment.publicFolders.api + '/capture.php',
                 method: 'POST',
                 data: data,
-                timeout: 25000
+                timeout:
+                    config.windows_agent && config.windows_agent.enabled
+                        ? (config.windows_agent.timeout * 2 + 15) * 1000
+                        : 25000
             })
             .done(async (result) => {
+                if (data.capture_id) {
+                    photoboothPhotoCamera.stopProgress();
+                }
                 try {
                     api.cheese.destroy();
                     if (config.ui.shutter_animation) {
@@ -697,12 +815,17 @@ const photoBooth = (function () {
                     previewFramePicture.hide();
                     if (result.error) {
                         photoboothTools.console.logDev('Error while taking picture.');
-                        if (config.picture.retry_on_error > 0 && retry < config.picture.retry_on_error) {
+                        if (
+                            !data.capture_id &&
+                            config.picture.retry_on_error > 0 &&
+                            retry < config.picture.retry_on_error
+                        ) {
                             api.retryTakePic(retry);
                         } else {
                             api.errorPic(result);
                         }
                     } else if (result.success === PhotoStyle.COLLAGE) {
+                        api.setFlowState(FlowState.SHOT_PREVIEW);
                         currentCollageFile = result.file;
                         api.nextCollageNumber = result.current + 1;
 
@@ -840,6 +963,16 @@ const photoBooth = (function () {
                 }
             })
             .fail(async (xhr, status, result) => {
+                if (data.capture_id) {
+                    photoboothPhotoCamera.stopProgress();
+                    api.errorPic(
+                        xhr.responseJSON || {
+                            error_code: 'CAPTURE_UNCERTAIN',
+                            error: 'Lượt chụp bị gián đoạn. Kiểm tra máy ảnh trước khi chụp lại.'
+                        }
+                    );
+                    return;
+                }
                 try {
                     if (photoboothTools.isCsrfErrorResponse(xhr)) {
                         photoboothTools.handleCsrfMismatch(environment.publicFolders.api + '/capture.php');
@@ -930,6 +1063,11 @@ const photoBooth = (function () {
     };
 
     api.errorPic = function (data) {
+        const agentMode = config.windows_agent && config.windows_agent.enabled;
+        if (agentMode) {
+            photoboothPhotoCamera.stopProgress();
+        }
+        api.setFlowState(FlowState.ERROR);
         setTimeout(function () {
             try {
                 api.cheese.destroy();
@@ -946,7 +1084,9 @@ const photoBooth = (function () {
                     videoAnimation.hide();
                 }
                 loaderMessage.addClass('stage-message--error');
-                loaderMessage.append($('<p>').text(photoboothTools.getTranslation('error')));
+                loaderMessage.append(
+                    $('<p>').text(data.error_code ? data.error : photoboothTools.getTranslation('error'))
+                );
                 photoboothTools.console.log('An error occurred:', data.error);
                 if (config.dev.loglevel > 1) {
                     loaderMessage.append($('<p>').text(data.error));
@@ -959,7 +1099,18 @@ const photoBooth = (function () {
                 api.takingPic = false;
             }
 
-            if (config.dev.reload_on_error) {
+            if (agentMode) {
+                const reconnect = $('<button type="button" class="button rotaryfocus">').text('Thử kết nối lại');
+                reconnect.appendTo(loaderButtonBar).on('click', async () => {
+                    reconnect.prop('disabled', true);
+                    await photoboothPhotoCamera.check();
+                    api.reset();
+                    startPage.addClass('stage--active');
+                    if (typeof sguKiosk !== 'undefined') {
+                        await sguKiosk.loadPreflight();
+                    }
+                });
+            } else if (config.dev.reload_on_error) {
                 try {
                     loaderMessage.append($('<p>').text(photoboothTools.getTranslation('auto_reload')));
                 } catch {
@@ -982,6 +1133,7 @@ const photoBooth = (function () {
     };
 
     api.processPic = function (result) {
+        api.setFlowState(FlowState.COMPOSING);
         startTime = new Date().getTime();
         loader.addClass('stage--active');
         startPage.removeClass('stage--active');
@@ -1017,6 +1169,7 @@ const photoBooth = (function () {
                     file: result.file,
                     filter: imgFilter,
                     style: api.photoStyle,
+                    capture_id: result.capture_id || '',
                     collageLayout: api.collageLayout,
                     collageLimit: api.collageLimit
                 }
@@ -1056,12 +1209,17 @@ const photoBooth = (function () {
                 }
                 setFiltersEnabled(true);
                 api.errorPic({
-                    error: 'Request failed: ' + textStatus
+                    error_code: config.windows_agent && config.windows_agent.enabled ? 'PROCESSING_FAILED' : undefined,
+                    error:
+                        config.windows_agent && config.windows_agent.enabled
+                            ? 'Đã nhận JPEG từ camera nhưng xử lý ảnh thất bại.'
+                            : 'Request failed: ' + textStatus
                 });
             });
     };
 
     api.processVideo = function (result) {
+        api.setFlowState(FlowState.COMPOSING);
         startTime = new Date().getTime();
 
         videoSensor.hide();
@@ -1138,6 +1296,7 @@ const photoBooth = (function () {
     };
 
     api.renderChroma = function (filename) {
+        api.setFlowState(FlowState.FINAL_PREVIEW);
         api.filename = filename;
 
         if (config.keying.show_all) {
@@ -1286,6 +1445,7 @@ const photoBooth = (function () {
     };
 
     api.renderPic = function (filename, files) {
+        api.setFlowState(FlowState.FINAL_PREVIEW);
         api.filename = filename;
 
         if (config.print.auto && config.filters.enabled === false) {
@@ -1864,6 +2024,10 @@ const photoBooth = (function () {
         }
     });
 
+    api.captureSession =
+        config.sgu?.enabled && config.sgu?.session_enabled && typeof createCaptureSession !== 'undefined'
+            ? createCaptureSession(api)
+            : null;
     return api;
 })();
 

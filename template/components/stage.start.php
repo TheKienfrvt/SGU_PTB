@@ -7,6 +7,11 @@ $startpageTextPosition = StartpageTextPosition::resolve(
     $config['logo']['position'] ?? null,
     $config['logo']['enabled'] ?? null
 );
+
+if ($config['sgu']['enabled']) {
+    include PathUtility::getAbsolutePath('template/components/stage.start.sgu.php');
+    return;
+}
 ?>
 <!-- Start Page -->
 <div class="stage stage--start rotarygroup" data-stage="start">

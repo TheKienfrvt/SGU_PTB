@@ -52,6 +52,7 @@ gulp.task('sass', async function () {
     }
   } catch (error) {
     console.error('Error compiling Sass:', error);
+    throw error;
   }
 });
 
@@ -74,6 +75,7 @@ gulp.task('tailwind-admin', async function () {
     console.log(`Compiled and processed Tailwind Admin SCSS to ${outputPath}`);
   } catch (error) {
     console.error('Error compiling Tailwind Admin:', error);
+    throw error;
   }
 });
 

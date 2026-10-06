@@ -1,0 +1,44 @@
+{
+    "id": "mau-2",
+    "name": "Mẫu 2",
+    "enabled": true,
+    "thumbnail": "thumbnail.jpg",
+    "overlay": "overlay.png",
+    "canvas": {
+        "width": 2001,
+        "height": 6001,
+        "background": "#ffffff"
+    },
+    "photo_slots": [
+        {
+            "id": "slot-1",
+            "x": 91,
+            "y": 693,
+            "width": 1819,
+            "height": 1200,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        },
+        {
+            "id": "slot-2",
+            "x": 91,
+            "y": 1992,
+            "width": 1819,
+            "height": 1200,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        },
+        {
+            "id": "slot-3",
+            "x": 91,
+            "y": 3290,
+            "width": 1819,
+            "height": 1201,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        }
+    ]
+}

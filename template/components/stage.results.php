@@ -4,10 +4,21 @@ use Photobooth\Utility\ComponentUtility;
 
 echo '<div class="stage stage--result rotarygroup" data-stage="result">';
 echo '<div class="stage-inner">';
+if ($config['sgu']['enabled']) {
+    echo '<div class="sgu-final-heading"><img src="' . \Photobooth\Utility\PathUtility::getPublicPath('resources/img/sgu/sgu-logo.png') . '" alt="Đại học Sài Gòn"><div><span>SGU PHOTOBOOTH</span><strong>Ảnh của bạn đã sẵn sàng</strong></div></div>';
+}
 echo '<div class="buttonbar buttonbar--bottom">';
 
 if ($config['button']['homescreen']) {
     echo ComponentUtility::renderButton('home', $config['icons']['home'], 'homebtn');
+}
+
+if ($config['download']['enabled']) {
+    echo ComponentUtility::renderButton('Chọn nơi lưu ảnh', $config['icons']['download'], 'saveimagebtn', true, [
+        'data-save-image' => 'true',
+        'aria-describedby' => 'save-image-status',
+        'disabled' => 'disabled',
+    ]);
 }
 
 if ($config['ui']['result_buttons']) {
@@ -45,6 +56,10 @@ if ($config['filters']['enabled']) {
 }
 if ($config['picture']['allow_delete']) {
     echo ComponentUtility::renderButton('delete', $config['icons']['delete'], 'deletebtn');
+}
+
+if ($config['download']['enabled']) {
+    echo '<p id="save-image-status" class="save-image-status" role="status" aria-live="polite" aria-atomic="true"></p>';
 }
 
 echo '</div>';

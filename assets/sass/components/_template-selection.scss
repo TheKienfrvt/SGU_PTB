@@ -1,0 +1,603 @@
+.sgu-kiosk .stage--template {
+  --stage-color: #fff;
+  --stage-background: #071b35;
+  position: relative;
+  isolation: isolate;
+  overflow-x: hidden;
+  overflow-y: auto;
+  align-items: stretch;
+  touch-action: pan-y;
+
+  &::before {
+    position: fixed;
+    z-index: -1;
+    inset: 0;
+    background:
+      linear-gradient(115deg, rgba(4, 21, 45, 0.94), rgba(4, 24, 49, 0.78) 58%, rgba(7, 30, 58, 0.88)),
+      var(--sgu-campus-image) center / cover no-repeat;
+    content: '';
+    pointer-events: none;
+  }
+}
+
+.sgu-template-selection {
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: clamp(1rem, 2.2vh, 1.75rem);
+  width: min(100%, 88rem);
+  min-width: 0;
+  min-height: 100%;
+  margin: 0 auto;
+  padding: clamp(1rem, 2.4vw, 2.25rem);
+  box-sizing: border-box;
+  color: #fff;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif;
+
+  &__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1.5rem;
+    min-width: 0;
+    padding-bottom: clamp(0.85rem, 1.8vh, 1.25rem);
+    border-bottom: 1px solid rgba(233, 201, 121, 0.38);
+  }
+
+  &__brand {
+    display: flex;
+    align-items: center;
+    gap: clamp(0.8rem, 1.3vw, 1.25rem);
+    min-width: 0;
+
+    img {
+      width: clamp(3.25rem, 4.5vw, 4.5rem);
+      height: clamp(3.25rem, 4.5vw, 4.5rem);
+      flex: 0 0 auto;
+      object-fit: contain;
+    }
+
+    > div {
+      min-width: 0;
+    }
+
+    p,
+    h1 {
+      margin: 0;
+    }
+
+    p {
+      color: var(--sgu-gold);
+      font-size: 0.76rem;
+      font-weight: 800;
+      letter-spacing: 0.22em;
+    }
+
+    h1 {
+      margin-top: 0.2rem;
+      font-size: clamp(1.55rem, 2.3vw, 2.25rem);
+      font-weight: 750;
+      line-height: 1.2;
+      outline: none;
+      overflow-wrap: anywhere;
+    }
+  }
+
+  &__add.button {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    width: auto;
+    min-width: 11rem;
+    min-height: 3.25rem;
+    padding: 0.65rem 1.2rem;
+    border: 1px solid rgba(233, 201, 121, 0.68);
+    border-radius: 999px;
+    background: rgba(9, 35, 67, 0.64);
+    color: #fff;
+    font-size: 0.95rem;
+    font-weight: 700;
+    white-space: nowrap;
+    box-shadow: none;
+
+    span {
+      font-size: 1.55rem;
+      font-weight: 400;
+      line-height: 0.8;
+    }
+
+    &:hover:not(:disabled) {
+      border-color: var(--sgu-gold);
+      background: rgba(55, 139, 183, 0.38);
+    }
+
+    &:focus-visible {
+      outline: 3px solid #fff;
+      outline-offset: 3px;
+    }
+  }
+
+  &__content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: clamp(1rem, 2.5vh, 1.75rem);
+    width: 100%;
+    min-width: 0;
+    padding: clamp(1rem, 2.4vw, 2rem);
+    border: 1px solid rgba(233, 201, 121, 0.3);
+    border-radius: 1.5rem;
+    background: rgba(5, 25, 50, 0.76);
+    box-shadow: 0 1.5rem 4rem rgba(1, 12, 29, 0.22);
+    box-sizing: border-box;
+  }
+
+  &__intro {
+    max-width: 40rem;
+    text-align: center;
+
+    h2 {
+      margin: 0.6rem 0 0.35rem;
+      font-size: clamp(1.55rem, 2.5vw, 2.4rem);
+      font-weight: 750;
+      line-height: 1.2;
+      text-wrap: balance;
+    }
+
+    p {
+      margin: 0;
+      color: #d6eaf6;
+      font-size: clamp(0.95rem, 1.2vw, 1.1rem);
+      line-height: 1.5;
+    }
+  }
+
+  &__step {
+    display: inline-block;
+    padding: 0.35rem 0.8rem;
+    border: 1px solid rgba(233, 201, 121, 0.55);
+    border-radius: 999px;
+    background: rgba(233, 201, 121, 0.12);
+    color: var(--sgu-gold);
+    font-size: 0.72rem;
+    font-weight: 800;
+    letter-spacing: 0.13em;
+  }
+
+  &__help,
+  &__empty,
+  &__error {
+    margin: 0;
+    max-width: 100%;
+    text-align: center;
+    overflow-wrap: anywhere;
+  }
+
+  &__help {
+    color: var(--sgu-gold);
+    font-size: 0.78rem;
+    font-weight: 800;
+    letter-spacing: 0.16em;
+  }
+
+  &__empty {
+    max-width: 36rem;
+    padding: 2rem;
+    border: 1px dashed rgba(200, 239, 255, 0.6);
+    border-radius: 1rem;
+    background: rgba(8, 39, 70, 0.72);
+    color: #e3f4fc;
+    font-size: 1.05rem;
+    line-height: 1.6;
+  }
+
+  &__error {
+    padding: 0.8rem 1rem;
+    border-radius: 0.75rem;
+    background: #9f1d2f;
+    color: #fff;
+    font-weight: 700;
+  }
+
+  &__grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(11rem, 13rem));
+    justify-content: center;
+    align-items: stretch;
+    gap: clamp(0.8rem, 1.5vw, 1.25rem);
+    width: 100%;
+    max-width: 62.5rem;
+    min-width: 0;
+    margin-inline: auto;
+  }
+
+  &__actions {
+    position: sticky;
+    bottom: 0;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 1rem;
+    min-height: 4.5rem;
+    padding: 0.75rem clamp(0.8rem, 2vw, 1.25rem);
+    border: 1px solid rgba(233, 201, 121, 0.38);
+    border-radius: 1rem;
+    background: rgba(5, 25, 50, 0.94);
+    box-shadow: 0 0.75rem 2.5rem rgba(1, 12, 29, 0.22);
+    box-sizing: border-box;
+
+    .button {
+      width: auto;
+      min-width: 11rem;
+      min-height: 3.2rem;
+      padding: 0.65rem 1.5rem;
+      border: 2px solid var(--sgu-gold);
+      border-radius: 999px;
+      background: var(--sgu-gold);
+      color: #072645;
+      font:
+        800 1rem/1.2 'Be Vietnam Pro',
+        'Segoe UI',
+        Arial,
+        sans-serif;
+      box-shadow: none;
+
+      &:hover:not(:disabled) {
+        border-color: #fff;
+        background: #f2d994;
+      }
+
+      &:focus-visible {
+        outline: 3px solid #fff;
+        outline-offset: 3px;
+      }
+
+      &:disabled {
+        cursor: not-allowed;
+        opacity: 0.48;
+      }
+    }
+  }
+
+  &__action-buttons {
+    display: flex;
+    justify-content: flex-end;
+    gap: 0.65rem;
+    min-width: 0;
+  }
+
+  &__actions &__clear.button,
+  &__actions &__save.button {
+    min-width: 10rem;
+    border-color: rgba(255, 255, 255, 0.6);
+    background: transparent;
+    color: #fff;
+
+    &:hover:not(:disabled) {
+      border-color: #fff;
+      background: rgba(255, 255, 255, 0.13);
+    }
+  }
+
+  &__status {
+    display: grid;
+    gap: 0.2rem;
+    min-width: 0;
+  }
+
+  &__selection {
+    margin: 0;
+    color: #d6eaf6;
+    font-size: 0.95rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+
+  &__save-status {
+    margin: 0;
+    color: var(--sgu-gold);
+    font-size: 0.82rem;
+    font-weight: 600;
+    overflow-wrap: anywhere;
+  }
+}
+
+.sgu-template-card {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  width: 100%;
+  min-width: 0;
+  max-width: 13rem;
+  min-height: 0;
+  padding: 0.45rem;
+  overflow: hidden;
+  appearance: none;
+  border: 3px solid transparent;
+  border-radius: 1.1rem;
+  background: #f6faff;
+  box-shadow: 0 0.65rem 1.75rem rgba(0, 11, 31, 0.24);
+  color: #102a43;
+  text-align: left;
+  cursor: pointer;
+  font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif;
+  transition:
+    transform 0.18s ease,
+    border-color 0.18s ease,
+    box-shadow 0.18s ease;
+
+  &__preview {
+    position: relative;
+    display: grid;
+    place-items: center;
+    width: 100%;
+    height: clamp(12rem, 31dvh, 19rem);
+    overflow: hidden;
+    border-radius: 0.75rem;
+    background: #e7f0f8;
+
+    img {
+      display: block;
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+  }
+
+  &__selected {
+    position: absolute;
+    top: 0.6rem;
+    right: 0.6rem;
+    display: none;
+    place-items: center;
+    width: 2rem;
+    height: 2rem;
+    border: 2px solid #fff;
+    border-radius: 50%;
+    background: #b7862e;
+    box-shadow: 0 0.2rem 0.75rem rgba(0, 26, 58, 0.32);
+    color: #fff;
+    font-size: 1.1rem;
+    font-weight: 800;
+    line-height: 1;
+  }
+
+  &__details {
+    display: flex;
+    flex-direction: column;
+    gap: 0.2rem;
+    padding: 0.7rem 0.55rem 0.45rem;
+  }
+
+  &__name {
+    font-size: 0.95rem;
+    font-weight: 750;
+    line-height: 1.35;
+    overflow-wrap: anywhere;
+  }
+
+  &__size {
+    color: #4b667f;
+    font-size: 0.78rem;
+    font-weight: 600;
+  }
+
+  &:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 1rem 2rem rgba(0, 11, 31, 0.32);
+  }
+
+  &:focus-visible {
+    outline: 3px solid #fff;
+    outline-offset: 3px;
+  }
+
+  &--selected,
+  &[aria-pressed='true'] {
+    border-color: var(--sgu-gold);
+    box-shadow:
+      0 0 0 3px rgba(233, 201, 121, 0.4),
+      0 1rem 2rem rgba(0, 11, 31, 0.28);
+
+    .sgu-template-card__selected {
+      display: grid;
+    }
+  }
+}
+
+.sgu-template-upload {
+  position: fixed;
+  z-index: 10020;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 1rem;
+  box-sizing: border-box;
+  background: rgba(2, 13, 31, 0.84);
+  backdrop-filter: blur(8px);
+
+  &[hidden] {
+    display: none;
+  }
+
+  &__panel {
+    display: grid;
+    gap: 0.85rem;
+    width: min(100%, 34rem);
+    max-width: 100%;
+    max-height: min(90dvh, calc(100dvh - 2rem));
+    padding: clamp(1.25rem, 4vw, 2rem);
+    overflow: auto;
+    border: 1px solid rgba(200, 239, 255, 0.5);
+    border-radius: 1.25rem;
+    background: #f6faff;
+    box-shadow: 0 1.5rem 5rem rgba(0, 0, 0, 0.45);
+    color: #102a43;
+    box-sizing: border-box;
+    font-family: 'Be Vietnam Pro', 'Segoe UI', Arial, sans-serif;
+
+    h2,
+    p {
+      margin: 0;
+    }
+
+    h2 {
+      font-size: clamp(1.5rem, 3vw, 2rem);
+      line-height: 1.2;
+    }
+
+    label {
+      margin-top: 0.35rem;
+      font-weight: 700;
+    }
+
+    input {
+      width: 100%;
+      min-width: 0;
+      max-width: 100%;
+      min-height: 3.25rem;
+      padding: 0.7rem 0.85rem;
+      border: 2px solid #a9c4d8;
+      border-radius: 0.7rem;
+      background: #fff;
+      color: #102a43;
+      font: inherit;
+      box-sizing: border-box;
+    }
+  }
+
+  &__hint {
+    color: #49677d;
+    font-size: 0.9rem;
+    line-height: 1.45;
+  }
+
+  &__status {
+    padding: 0.7rem 0.85rem;
+    border-radius: 0.65rem;
+    background: #d9f5e8;
+    color: #17543a;
+    font-weight: 700;
+
+    &--error {
+      background: #ffe2e5;
+      color: #932035;
+    }
+  }
+
+  &__actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+    margin-top: 0.5rem;
+
+    .button {
+      width: auto;
+      min-width: 9rem;
+      max-width: 100%;
+      min-height: 3.25rem;
+      border-radius: 999px;
+    }
+
+    .button--secondary {
+      border: 2px solid #1b587b;
+      background: transparent;
+      color: #1b587b;
+    }
+  }
+}
+
+@media (max-width: 64rem) {
+  .sgu-template-selection__grid {
+    max-width: 41.25rem;
+  }
+}
+
+@media (max-width: 40rem) {
+  .sgu-template-selection {
+    grid-template-rows: auto 1fr auto;
+    gap: 0.8rem;
+    padding: 0.85rem 0.85rem 8rem;
+
+    &__header {
+      align-items: flex-start;
+      flex-wrap: wrap;
+      gap: 0.85rem;
+    }
+
+    &__add.button {
+      width: 100%;
+    }
+
+    &__content {
+      justify-content: flex-start;
+      padding: 1.2rem 0.85rem;
+      border-radius: 1rem;
+    }
+
+    &__grid {
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      max-width: 27rem;
+      gap: 0.7rem;
+    }
+
+    &__actions {
+      position: fixed;
+      z-index: 3;
+      right: 0.85rem;
+      bottom: max(0.5rem, env(safe-area-inset-bottom));
+      left: 0.85rem;
+      flex-wrap: wrap;
+      padding: 0.75rem;
+
+      .sgu-template-selection__status {
+        width: 100%;
+        text-align: center;
+      }
+
+      .sgu-template-selection__action-buttons {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        width: 100%;
+      }
+
+      .sgu-template-selection__save {
+        grid-column: 1 / -1;
+      }
+
+      .button {
+        width: 100%;
+        min-width: 0;
+        padding-inline: 0.55rem;
+        font-size: 0.9rem;
+      }
+    }
+  }
+
+  .sgu-template-card__preview {
+    height: clamp(10rem, 29dvh, 16rem);
+  }
+
+  .sgu-template-upload__actions {
+    display: grid;
+
+    .button {
+      width: 100%;
+    }
+  }
+}
+
+@media (max-width: 23rem) {
+  .sgu-template-selection__grid {
+    grid-template-columns: minmax(0, 1fr);
+    max-width: 13rem;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .sgu-template-card {
+    transition: none;
+  }
+}

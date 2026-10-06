@@ -567,6 +567,7 @@ const photoboothTools = (function () {
             api.overlay.close();
             cb();
             api.isPrinting = false;
+            document.dispatchEvent(new CustomEvent('photobooth.flow.state', { detail: { state: 'final-preview' } }));
         }, to);
     };
 
@@ -580,6 +581,7 @@ const photoboothTools = (function () {
         } else {
             api.overlay.show(api.getTranslation('printing'));
             api.isPrinting = true;
+            document.dispatchEvent(new CustomEvent('photobooth.flow.state', { detail: { state: 'printing' } }));
             if (typeof remoteBuzzerClient !== 'undefined') {
                 remoteBuzzerClient.inProgress('print');
             }
@@ -617,6 +619,9 @@ const photoboothTools = (function () {
                             api.overlay.close();
                             cb();
                             api.isPrinting = false;
+                            document.dispatchEvent(
+                                new CustomEvent('photobooth.flow.state', { detail: { state: 'complete' } })
+                            );
                         }, config.print.time);
                     }
                 },

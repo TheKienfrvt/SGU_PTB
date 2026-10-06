@@ -25,6 +25,10 @@
 @use 'components/github-corner';
 @use 'components/background';
 @use 'components/viewer';
+@use 'components/sgu-kiosk';
+@use 'components/capture-session';
+@use 'components/template-selection';
+@use 'components/save-image';
 
 // Experiments
 @use 'experiments/video-capture-animation';

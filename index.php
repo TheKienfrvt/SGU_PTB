@@ -5,6 +5,7 @@ require_once 'lib/boot.php';
 use Photobooth\Service\ApplicationService;
 use Photobooth\Service\AssetService;
 use Photobooth\Service\ProcessService;
+use Photobooth\Capture\FrameTemplateCatalog;
 use Photobooth\Utility\PathUtility;
 
 $assetService = AssetService::getInstance();
@@ -51,9 +52,16 @@ if (
 }
 
 include PathUtility::getAbsolutePath('template/components/main.head.php');
+$sguCampusStyle = $config['sgu']['enabled']
+    ? " style=\"--sgu-campus-image: url('" . htmlspecialchars(
+        PathUtility::getPublicPath('sgu/IMG_5492.JPG'),
+        ENT_QUOTES,
+        'UTF-8'
+    ) . "')\""
+    : '';
 ?>
 
-<body class="gallery-mode--overlay ">
+<body class="gallery-mode--overlay <?= $config['sgu']['enabled'] ? 'sgu-kiosk' : '' ?>"<?= $sguCampusStyle ?>>
 <?php include PathUtility::getAbsolutePath('template/components/video.background.php'); ?>
 <?php include PathUtility::getAbsolutePath('template/components/preview.php'); ?>
 
@@ -75,10 +83,20 @@ include PathUtility::getAbsolutePath('template/components/main.head.php');
 $privateStageStart = PathUtility::getAbsolutePath('private/components/stage.start.php');
 $stageStart = PathUtility::getAbsolutePath('template/components/stage.start.php');
 
+if ($config['sgu']['enabled'] && $config['sgu']['session_enabled']) {
+    $frameTemplates = (new FrameTemplateCatalog(
+        PathUtility::getAbsolutePath('templates/frames'),
+        (int) $config['sgu']['max_pixels']
+    ))->all();
+    include PathUtility::getAbsolutePath('template/components/stage.template.php');
+}
 include file_exists($privateStageStart) ? $privateStageStart : $stageStart;
 if (!$config['ui']['selfie_mode']) {
     include PathUtility::getAbsolutePath('template/components/stage.loader.php');
     include PathUtility::getAbsolutePath('template/components/stage.results.php');
+    if ($config['sgu']['enabled'] && $config['sgu']['session_enabled']) {
+        include PathUtility::getAbsolutePath('template/components/stage.session.php');
+    }
 }
 
 if ($config['gallery']['enabled']) {
@@ -99,7 +117,18 @@ if ($config['ui']['selfie_mode']) {
 <script src="<?=$assetService->getUrl('resources/js/preview.js')?>"></script>
 <script src="<?=$assetService->getUrl('resources/js/virtualKeyboard.js')?>"></script>
     <script src="<?=$assetService->getUrl('resources/js/screensaver.js')?>"></script>
+    <script src="<?=$assetService->getUrl('resources/js/capture-session.js')?>"></script>
     <script src="<?=$assetService->getUrl('resources/js/core.js')?>"></script>
+    <script src="<?=$assetService->getUrl('resources/js/photo-camera.js')?>"></script>
+<?php if ($config['download']['enabled']): ?>
+    <script src="<?=$assetService->getUrl('resources/js/save-image.js')?>"></script>
+<?php endif; ?>
+<?php if ($config['sgu']['enabled']): ?>
+    <script src="<?=$assetService->getUrl('resources/js/sgu-kiosk.js')?>"></script>
+<?php endif; ?>
+<?php if ($config['sgu']['enabled'] && $config['sgu']['session_enabled']): ?>
+    <script src="<?=$assetService->getUrl('resources/js/template-selection.js')?>"></script>
+<?php endif; ?>
 
 <?php include PathUtility::getAbsolutePath('template/components/start.adminshortcut.php'); ?>
 <?php ProcessService::getInstance()->boot(); ?>

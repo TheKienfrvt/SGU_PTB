@@ -8,7 +8,7 @@ $previewFlipClass = $config['preview']['flip'];
 $previewStyleClass = $config['preview']['style'];
 $previewShowPictureFrame = $config['preview']['showFrame'] && !empty($config['picture']['frame']);
 $previewShowCollageFrame = $config['preview']['showFrame'] && !empty($config['collage']['frame']);
-$extendPreviewAsPicture = $config['preview']['showFrame'] && $config['picture']['extend_by_frame'] && $config['preview']['extend_by_frame'];
+$extendPreviewAsPicture = !$config['sgu']['enabled'] && $config['preview']['showFrame'] && $config['picture']['extend_by_frame'] && $config['preview']['extend_by_frame'];
 $l = $t = $r = $b = 0;
 $x = !empty($config['preview']['videoWidth']) ? $config['preview']['videoWidth'] : 1280;
 $y = !empty($config['preview']['videoHeight']) ? $config['preview']['videoHeight'] : 720;
@@ -44,7 +44,7 @@ $composed_style = '
 echo '<div class="preview">';
 echo '<div id="preview-container" style="aspect-ratio: ' . $comp . '">';
 echo '<div id="preview-wrapper" style="aspect-ratio:' . $comp . '">';
-echo '<video id="preview--video" style="' . $composed_style . '" class="' . $previewFlipClass . ' ' . $previewStyleClass . '" autoplay playsinline></video>';
+echo '<video id="preview--video" style="' . $composed_style . '" class="' . $previewFlipClass . ' ' . $previewStyleClass . '" autoplay playsinline muted></video>';
 echo '<div id="preview--ipcam" style="' . $composed_style . '" class="' . $previewFlipClass . ' ' . $previewStyleClass . '"></div>';
 echo '<div id="preview--none">' . $languageService->translate('no_preview') . '</div>';
 echo '</div></div>';

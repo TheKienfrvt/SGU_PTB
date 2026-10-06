@@ -1,0 +1,44 @@
+{
+    "id": "sgu-dayy",
+    "name": "SGU_Dayy",
+    "enabled": true,
+    "thumbnail": "thumbnail.jpg",
+    "overlay": "overlay.png",
+    "canvas": {
+        "width": 1001,
+        "height": 3001,
+        "background": "#ffffff"
+    },
+    "photo_slots": [
+        {
+            "id": "slot-1",
+            "x": 59,
+            "y": 205,
+            "width": 883,
+            "height": 719,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        },
+        {
+            "id": "slot-2",
+            "x": 59,
+            "y": 968,
+            "width": 883,
+            "height": 720,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        },
+        {
+            "id": "slot-3",
+            "x": 59,
+            "y": 1732,
+            "width": 883,
+            "height": 720,
+            "fit": "cover",
+            "position": "center",
+            "rotation": 0
+        }
+    ]
+}
