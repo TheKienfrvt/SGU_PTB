@@ -15,6 +15,9 @@ $config['login']['password'] = 'secret';
 $config['login']['pin'] = 'secret';
 $config['ftp']['username'] = 'secret';
 $config['ftp']['password'] = 'secret';
+// The browser calls PHP only. Never publish the Windows host credential or URL.
+unset($config['windows_agent']['token'], $config['windows_agent']['url']);
+unset($config['sgu']['overlay']);
 
 if (!empty($config['logo']['path'])) {
     $config['logo']['path'] = PathUtility::getPublicPath($config['logo']['path']);

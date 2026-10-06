@@ -15,6 +15,8 @@ use Photobooth\Service\LoggerService;
 use Photobooth\Service\RemoteStorageService;
 use Photobooth\Utility\ImageUtility;
 use Photobooth\Utility\PathUtility;
+use Photobooth\Capture\CameraException;
+use Photobooth\Capture\OriginalStorage;
 
 header('Content-Type: application/json');
 
@@ -27,6 +29,12 @@ $database = DatabaseManagerService::getInstance();
 $remoteStorage = RemoteStorageService::getInstance();
 
 $processor = null;
+$processingStarted = microtime(true);
+$captureId = is_string($_POST['capture_id'] ?? null) && preg_match('/^[a-f0-9]{32}$/D', $_POST['capture_id'])
+    ? $_POST['capture_id'] : null;
+if ($config['windows_agent']['enabled']) {
+    $logger->info('processing started', ['capture_id' => $captureId]);
+}
 
 try {
     if (empty($_POST['file'])) {
@@ -374,8 +382,9 @@ try {
     if (is_array($imageHandler->errorLog) && !empty($imageHandler->errorLog)) {
         $logger->error('Error', $imageHandler->errorLog);
     }
-    $logger->error($e->getMessage());
-    echo json_encode(['error' => $e->getMessage()]);
+    $logger->error($e->getMessage(), ['capture_id' => $captureId, 'error_code' => 'PROCESSING_FAILED']);
+    echo json_encode($config['windows_agent']['enabled']
+        ? (new CameraException('PROCESSING_FAILED'))->response() : ['error' => $e->getMessage()]);
     die();
 }
 
@@ -387,6 +396,12 @@ $data = [
     'file' => $vars['fileName'],
     'images' => $vars['srcImages'],
 ];
+if ($config['windows_agent']['enabled']) {
+    $data['originals'] = (new OriginalStorage(FolderEnum::DATA->absolute() . '/original', $config['windows_agent']['max_bytes']))
+        ->forImage($vars['fileName']);
+    $logger->info('processing completed', ['capture_id' => $captureId,
+        'elapsed_ms' => (int) ((microtime(true) - $processingStarted) * 1000)]);
+}
 $logger->debug('effects applied', $data);
 echo json_encode($data);
 exit();

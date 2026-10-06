@@ -126,8 +126,9 @@ class PathUtility
             return $path;
         }
 
+        $path = self::fixFilePath($path);
         if (self::isAbsolutePath($path)) {
-            $rootPath = self::getRootPath();
+            $rootPath = self::fixFilePath(self::getRootPath());
             if (str_starts_with($path, $rootPath)) {
                 $path = str_replace($rootPath, '', $path);
             }
@@ -155,7 +156,7 @@ class PathUtility
         $documentRoot = (string)realpath($_SERVER['DOCUMENT_ROOT']);
         $rootPath = self::getRootPath();
 
-        return self::fixFilePath(str_replace($documentRoot, '', $rootPath) . '/');
+        return '/' . ltrim(self::fixFilePath(str_replace($documentRoot, '', $rootPath) . '/'), '/');
     }
 
     /**
@@ -187,7 +188,7 @@ class PathUtility
         }
 
         $normalized = self::fixFilePath($path);
-        $root = self::getRootPath();
+        $root = self::fixFilePath(self::getRootPath());
 
         if (self::isAbsolutePath($normalized) && str_starts_with($normalized, $root)) {
             return self::fixFilePath(substr($normalized, strlen($root)));

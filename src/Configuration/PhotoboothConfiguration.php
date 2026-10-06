@@ -38,6 +38,7 @@ use Photobooth\Configuration\Section\RembgConfiguration;
 use Photobooth\Configuration\Section\RemoteBuzzerConfiguration;
 use Photobooth\Configuration\Section\SlideshowConfiguration;
 use Photobooth\Configuration\Section\SoundConfiguration;
+use Photobooth\Configuration\Section\SguConfiguration;
 use Photobooth\Configuration\Section\StartScreenConfiguration;
 use Photobooth\Configuration\Section\SyncToDriveConfiguration;
 use Photobooth\Configuration\Section\TextOnCollageConfiguration;
@@ -47,6 +48,7 @@ use Photobooth\Configuration\Section\ThemeConfiguration;
 use Photobooth\Configuration\Section\UiConfiguration;
 use Photobooth\Configuration\Section\VideoConfiguration;
 use Photobooth\Configuration\Section\WebserverConfiguration;
+use Photobooth\Configuration\Section\WindowsAgentConfiguration;
 use Symfony\Component\Config\Definition\Builder\TreeBuilder;
 use Symfony\Component\Config\Definition\ConfigurationInterface;
 
@@ -61,11 +63,22 @@ class PhotoboothConfiguration implements ConfigurationInterface
             // we are ignoring extra keys to avoid having old configuration mixed up
             // only the current configuration will be processed
             ->ignoreExtraKeys()
+            ->beforeNormalization()
+                ->always(static function (array $config): array {
+                    // SGU needs browser preview before Start. Respect any explicit
+                    // preview mode, including "none", and the non-SGU defaults.
+                    if (($config['sgu']['enabled'] ?? true) === true && !isset($config['preview']['mode'])) {
+                        $config['preview']['mode'] = 'device_cam';
+                    }
+                    return $config;
+                })
+            ->end()
             ->children()
                 ->append(UiConfiguration::getNode())
                 ->append(AdminPanelConfiguration::getNode())
                 ->append(DevConfiguration::getNode())
                 ->append(WebserverConfiguration::getNode())
+                ->append(WindowsAgentConfiguration::getNode())
                 ->append(StartScreenConfiguration::getNode())
                 ->append(ScreensaverConfiguration::getNode())
                 ->append(LogoConfiguration::getNode())
@@ -107,6 +120,7 @@ class PhotoboothConfiguration implements ConfigurationInterface
                 ->append(SoundConfiguration::getNode())
                 ->append(RembgConfiguration::getNode())
                 ->append(ThemeConfiguration::getNode())
+                ->append(SguConfiguration::getNode())
             ->end();
 
         return $treeBuilder;

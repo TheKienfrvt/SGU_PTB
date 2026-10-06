@@ -48,6 +48,17 @@ try {
     }
 
     $printManager = PrintManagerService::getInstance();
+    // Serialize session-mode jobs and legacy/gallery jobs against the same printer.
+    if ($config['sgu']['session_enabled']) {
+        $jobLock = fopen(FolderEnum::VAR->absolute() . '/run/session-print.lock', 'c');
+        if ($jobLock === false || !flock($jobLock, LOCK_EX | LOCK_NB)) {
+            throw new \Exception('Printer is busy.');
+        }
+        register_shutdown_function(static function () use ($jobLock): void {
+            flock($jobLock, LOCK_UN);
+            fclose($jobLock);
+        });
+    }
     if ($printManager->isPrintLocked()) {
         throw new \Exception($config['print']['limit_msg']);
     }

@@ -7,16 +7,34 @@ require_once '../lib/boot.php';
 use Photobooth\Enum\FolderEnum;
 use Photobooth\Image;
 use Photobooth\PhotoboothCapture;
+use Photobooth\Capture\CameraException;
+use Photobooth\Capture\CapturePolicy;
+use Photobooth\Capture\WindowsAgentCapture;
 use Photobooth\Service\LoggerService;
 
 header('Content-Type: application/json');
 
 checkCsrfOrFail($_POST);
+if ($config['windows_agent']['enabled']) {
+    session_write_close();
+}
 
 $logger = LoggerService::getInstance()->getLogger('main');
 $logger->debug(basename($_SERVER['PHP_SELF']));
 
 try {
+    CapturePolicy::assertAllowed($config, $_POST);
+    if ($config['windows_agent']['enabled'] || $config['sgu']['session_enabled']) {
+        $requestLock = fopen(FolderEnum::VAR->absolute() . '/run/windows-camera.lock', 'c');
+        if ($requestLock === false || !flock($requestLock, LOCK_EX | LOCK_NB)) {
+            throw new CameraException('CAMERA_BUSY');
+        }
+        // Hold the lock across filename allocation, shutter, transfer and original copy.
+        register_shutdown_function(static function () use ($requestLock): void {
+            flock($requestLock, LOCK_UN);
+            fclose($requestLock);
+        });
+    }
     if (!isset($_POST['style'])) {
         throw new \Exception('No style provided');
     }
@@ -80,7 +98,15 @@ try {
             throw new \Exception('Invalid style provided.');
     }
 
-    if ($_POST['style'] === 'video') {
+    $original = null;
+    if ($config['windows_agent']['enabled']) {
+        if ($_POST['style'] === 'video' || isset($_POST['canvasimg'])) {
+            throw new CameraException('UNSUPPORTED_CAPTURE_MODE');
+        }
+        $captureId = isset($_POST['capture_id']) && is_string($_POST['capture_id'])
+            ? $_POST['capture_id'] : bin2hex(random_bytes(16));
+        $original = (new WindowsAgentCapture($config['windows_agent']))->capture($captureHandler, $captureId);
+    } elseif ($_POST['style'] === 'video') {
         $captureHandler->captureCmd = $config['commands']['take_video'];
         $captureHandler->captureWithCmd();
     } elseif ($config['dev']['demo_images']) {
@@ -102,7 +128,15 @@ try {
         $captureHandler->captureWithCmd();
     }
     // send image to frontend
-    echo json_encode($captureHandler->returnData());
+    $response = $captureHandler->returnData();
+    if ($original !== null) {
+        $response['original'] = $original;
+        $response['capture_id'] = $original['capture_id'];
+    }
+    echo json_encode($response);
+    exit();
+} catch (CameraException $e) {
+    echo json_encode($e->response());
     exit();
 } catch (\Exception $e) {
     $data = ['error' => $e->getMessage()];

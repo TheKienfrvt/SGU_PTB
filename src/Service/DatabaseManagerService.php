@@ -106,18 +106,12 @@ class DatabaseManagerService
             throw new \Exception('Database not defined.');
         }
 
-        $currContent = $this->getContentFromDB();
-
-        if (!in_array($content, $currContent)) {
-            $currContent[] = $content;
-            $encoded = json_encode($currContent);
-            if ($encoded === false) {
-                throw new \Exception('Failed to encode database content to JSON: ' . json_last_error_msg());
+        $this->updateAtomically(static function (array $files) use ($content): array {
+            if (!in_array($content, $files, true)) {
+                $files[] = $content;
             }
-            if (file_put_contents($this->databaseFile, $encoded) === false) {
-                throw new \Exception('Failed to write database file: ' . $this->databaseFile);
-            }
-        }
+            return $files;
+        });
     }
 
     /**
@@ -133,21 +127,40 @@ class DatabaseManagerService
         if (!isset($this->databaseFile) || empty($this->databaseFile)) {
             throw new \Exception('Database not defined.');
         }
-        $currContent = $this->getContentFromDB();
+        $this->updateAtomically(static fn (array $files): array => array_values(array_filter($files, static fn ($file): bool => $file !== $content)));
+    }
 
-        if (in_array($content, $currContent)) {
-            unset($currContent[array_search($content, $currContent)]);
-            $encoded = json_encode(array_values($currContent));
-            if ($encoded === false) {
-                throw new \Exception('Failed to encode database content to JSON: ' . json_last_error_msg());
-            }
-            if (file_put_contents($this->databaseFile, $encoded) === false) {
-                throw new \Exception('Failed to write database file: ' . $this->databaseFile);
-            }
+    /** Preserve the legacy filename-array schema; serialize all writers. */
+    private function updateAtomically(callable $change, bool $rebuild = false): void
+    {
+        $lock = fopen($this->databaseFile . '.lock', 'c');
+        if ($lock === false) {
+            throw new \RuntimeException('Cannot lock gallery database.');
         }
-
-        if (file_exists($this->databaseFile) && empty($currContent)) {
-            unlink($this->databaseFile);
+        $temporary = $this->databaseFile . '.' . bin2hex(random_bytes(8)) . '.tmp';
+        try {
+            if (!flock($lock, LOCK_EX)) {
+                throw new \RuntimeException('Cannot lock gallery database.');
+            }
+            $files = !$rebuild && is_file($this->databaseFile)
+                ? json_decode((string) file_get_contents($this->databaseFile), true, 512, JSON_THROW_ON_ERROR) : [];
+            if (!is_array($files)) {
+                throw new \RuntimeException('Invalid gallery database; refusing to overwrite.');
+            }
+            $files = $change($files);
+            $json = json_encode(array_values($files), JSON_THROW_ON_ERROR);
+            if (file_put_contents($temporary, $json) !== strlen($json) || !rename($temporary, $this->databaseFile)) {
+                throw new \RuntimeException('Cannot save gallery database.');
+            }
+            if ($files === []) {
+                unlink($this->databaseFile);
+            }
+        } finally {
+            if (is_file($temporary)) {
+                unlink($temporary);
+            }
+            flock($lock, LOCK_UN);
+            fclose($lock);
         }
     }
 
@@ -200,29 +213,18 @@ class DatabaseManagerService
             throw new \Exception('File directory not defined.');
         }
 
-        $output = [];
-        foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->imageDirectory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS)) as $value) {
-            if ($value->isFile() && strtolower(pathinfo($value->getFilename(), PATHINFO_EXTENSION)) === 'jpg') {
-                $output[] = [$value->getMTime(), $value->getFilename()];
-            }
-        }
-
-        if (!empty($output)) {
-            usort($output, function ($a, $b) {
-                return $a[0] <=> $b[0];
-            });
-        }
-
         try {
-            $filenames = array_column($output, 1);
-            $jsonData = json_encode($filenames);
-            if ($jsonData === false) {
-                throw new \Exception('Error: Failed to encode filenames to JSON.');
-            }
-
-            if (file_put_contents($this->databaseFile, $jsonData) === false) {
-                throw new \Exception('Error: Failed to write data to database.');
-            }
+            $this->updateAtomically(function (array $existing): array {
+                // Scan while holding the writer lock, preserving chronological rebuild behavior.
+                $output = [];
+                foreach (new \RecursiveIteratorIterator(new \RecursiveDirectoryIterator($this->imageDirectory, \FilesystemIterator::SKIP_DOTS | \FilesystemIterator::UNIX_PATHS)) as $value) {
+                    if ($value->isFile() && strtolower(pathinfo($value->getFilename(), PATHINFO_EXTENSION)) === 'jpg') {
+                        $output[] = [$value->getMTime(), $value->getFilename()];
+                    }
+                }
+                usort($output, static fn (array $a, array $b): int => $a[0] <=> $b[0]);
+                return array_column($output, 1);
+            }, true);
 
             return 'success';
         } catch (\Exception $e) {

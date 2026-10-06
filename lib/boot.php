@@ -87,8 +87,6 @@ if (!function_exists('checkCsrfOrFail')) {
         if (!hash_equals((string)$sessionToken, (string)$incomingToken)) {
             $logger = Photobooth\Service\LoggerService::getInstance()->getLogger('main');
             $logger->debug('CSRF validation failed', [
-                'expected' => $sessionToken,
-                'provided' => $incomingToken,
                 'path'     => $_SERVER['REQUEST_URI'] ?? '',
                 'method'   => $_SERVER['REQUEST_METHOD'] ?? '',
             ]);
