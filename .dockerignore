@@ -1,0 +1,11 @@
+camera-agent/
+.env
+.env.*
+node_modules/
+tools/*/vendor/
+.codex/
+.phplint.cache/
+.phpunit.result.cache
+data/
+var/
+config/my.config.inc.php

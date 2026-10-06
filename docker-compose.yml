@@ -1,10 +1,40 @@
-version: "3.9"
-
 services:
   photobooth:
     build: .
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "--max-time", "5", "http://127.0.0.1/"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 60s
     ports:
       - "80:80"
       - "443:443"
     environment:
       - COMPOSER_VERSION=2
+      # JPEG transfer is server-to-server streaming, not a browser upload.
+      # Reserve headroom for full-resolution Sony JPEG processing after transfer.
+      - PHP_MEMORY_LIMIT=1024M
+      - PHP_MAX_EXECUTION_TIME=300
+      - PHP_POST_MAX_SIZE=128M
+      - PHP_UPLOAD_MAX_FILESIZE=100M
+      - FPM_REQUEST_TERMINATE_TIMEOUT=300
+      - PHOTOBOOTH_CAMERA_AGENT_URL=${PHOTOBOOTH_CAMERA_AGENT_URL:-http://host.docker.internal:8765}
+      - PHOTOBOOTH_CAMERA_AGENT_TOKEN=${PHOTOBOOTH_CAMERA_AGENT_TOKEN:-}
+    volumes:
+      - photobooth-data:/app/data
+      - photobooth-config:/app/config
+      - photobooth-private:/app/private
+      - photobooth-var:/app/var
+      - photobooth-sessions:/sessions
+      # Scoped writable bind: the kiosk's "Thêm khung" action publishes only
+      # validated frame manifests/assets inside this host directory.
+      - ./templates/frames:/app/templates/frames
+
+volumes:
+  photobooth-data:
+  photobooth-config:
+  photobooth-private:
+  photobooth-var:
+  photobooth-sessions:
