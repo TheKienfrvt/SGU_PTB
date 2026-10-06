@@ -64,7 +64,16 @@ scripts/rembg_venv/
 
 # Native camera dependencies and credentials stay on the operator machine.
 /.env
+/.env.*
 /.env.runtime
+*.pem
+*.p12
+*.pfx
+*.key
+*.log
+*.bak
+*.sql
+*.sqlite*
 /camera-agent/*.local.json
 /camera-agent/*.local.txt
 /camera-agent/sdk/
@@ -74,3 +83,6 @@ scripts/rembg_venv/
 
 # Camera Agent is deferred from this public kiosk snapshot.
 /camera-agent/
+
+# Legacy debug endpoints must never return to this public snapshot.
+/test/

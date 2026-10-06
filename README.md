@@ -32,3 +32,7 @@ npm run eslint
 ```
 
 Các kiểm thử phần mềm dùng fixture hoặc mock. Chúng không xác nhận Cam Link, ảnh in hoặc máy in thật. Không đưa `.env`, `config/my.config.inc.php`, `data/`, `private/`, `var/` hoặc ảnh của khách vào Git; các đường dẫn này đã được ignore.
+
+## Giới hạn truy cập file
+
+Bản Docker không đưa `.git`, tài liệu phát triển hoặc trang kiểm thử vào image. Apache chặn truy cập HTTP trực tiếp tới mã PHP nội bộ, cấu hình, dữ liệu tạm và file không phải tài nguyên hiển thị trong `data/` và `private/`. Ảnh thành phẩm trong `data/images/` vẫn được phục vụ để gallery và tải ảnh hoạt động. Khi chạy ngoài Docker, cần cấu hình web server tương đương.

@@ -23,6 +23,7 @@ RUN echo "LimitRequestLine 12000" > /opt/docker/etc/httpd/conf.d/limits.conf \
 # Copy files
 WORKDIR /app
 COPY . .
+COPY docker/photobooth-security.conf /opt/docker/etc/httpd/conf.d/photobooth-security.conf
 
 RUN mkdir -p /app/data /app/config /app/private /app/var \
     && chown -R application:application /app
@@ -41,10 +42,6 @@ RUN mkdir -p /sessions && chown application:application /sessions && chmod 700 /
 
 # Use application for build operations only.
 USER application
-
-# Install and build
-RUN git config --global --add safe.directory /app \
-    && git submodule update --init
 
 # Prefetch this legacy archive: npm's concurrent streaming extraction can stall on it.
 # npm ci still verifies the content against package-lock.json's SHA-512 integrity.

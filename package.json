@@ -7,7 +7,7 @@
     "npm": ">=9.6.5"
   },
   "scripts": {
-    "build": "npm-run-all --serial composer:install format build:gulp build:head clean:skipwelcome",
+    "build": "npm-run-all --serial composer:install format build:gulp clean:skipwelcome",
     "build:gulp": "gulp",
     "build:head": "git log --format=\"%h %s\" -n 20 > HEAD",
     "build:sass": "gulp sass",

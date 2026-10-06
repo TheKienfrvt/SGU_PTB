@@ -739,8 +739,6 @@ for ($i = 0; $i < count($demoImages); $i++) {
                 <?php
                     echo getMenuBtn(PathUtility::getPublicPath('admin'), 'admin_panel', $config['icons']['admin']);
 
-echo getMenuBtn(PathUtility::getPublicPath('test/collage.php'), 'collageTest', $config['icons']['take_collage'], true);
-
 if (isset($_SESSION['auth']) && $_SESSION['auth'] === true) {
     echo getMenuBtn(PathUtility::getPublicPath('login/logout.php'), 'logout', $config['icons']['logout']);
 }
