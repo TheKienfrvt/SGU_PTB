@@ -71,3 +71,6 @@ scripts/rembg_venv/
 /camera-agent/build/
 /camera-agent/__pycache__/
 /camera-agent/tests/__pycache__/
+
+# Camera Agent is deferred from this public kiosk snapshot.
+/camera-agent/
